@@ -2,8 +2,8 @@ import java.util.Random;
 
 public class Main {
     public static void main(String[] args) {
-        int groupNumber = 5;         // замените на свой номер в списке группы
-        int simTimeSeconds = 20;     // время симуляции в секундах
+        int groupNumber = 22;
+        int simTimeSeconds = 20;
 
         Human[] humans = new Human[groupNumber];
         Random rnd = new Random();
