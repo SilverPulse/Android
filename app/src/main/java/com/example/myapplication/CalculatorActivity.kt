@@ -18,8 +18,16 @@ class CalculatorActivity : AppCompatActivity() {
         )
         for (id in buttonNumber) {
             val button: Button = findViewById(id)
-            button.setOnClickListener {
-                tvResult.text = tvResult.text.toString() + button.text.toString()
+            if (id == R.id.button1) {
+                button.setOnClickListener{
+                    tvResult.text = tvResult.text.toString() + button.text.toString()
+                    button.setBackgroundColor(2090)
+                }
+            }
+            else {
+                button.setOnClickListener {
+                    tvResult.text = tvResult.text.toString() + button.text.toString()
+                }
             }
         }
 
