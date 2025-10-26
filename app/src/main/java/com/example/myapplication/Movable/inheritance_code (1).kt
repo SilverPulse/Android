@@ -22,7 +22,7 @@ fun main() {
         Thread {
             var t = 0.0
             while (t < simulationTime) {
-                Thread.sleep((dt * 1000).toLong()) // имитируем времени
+                Thread.sleep((dt * 1000).toLong())
                 t += dt
                 actor.move(dt)
                 println("[${Thread.currentThread().name}] $actor")
