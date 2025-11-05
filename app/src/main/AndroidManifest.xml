@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+<<<<<<< HEAD
     <!-- Для Android 10+ -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
@@ -9,6 +10,8 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
 
+=======
+>>>>>>> 2bd9d8d98633aa367031e7723d2a26059cc3d93d
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
