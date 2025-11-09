@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:layout_width="match_parent"
@@ -18,19 +19,46 @@
         android:layout_height="300dp"
         android:layout_marginBottom="16dp"/>
 
+    <LinearLayout
+        android:id="@+id/timeRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="4dp"
+        android:weightSum="2">
+
+        <TextView
+            android:id="@+id/timeElapsed"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="00:00"
+            android:textSize="14sp"/>
+
+        <TextView
+            android:id="@+id/timeRemaining"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:text="-00:00"
+            android:textSize="14sp"/>
+    </LinearLayout>
+
     <SeekBar
         android:id="@+id/seekBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="28dp" />
+        android:layout_marginBottom="20dp" />
 
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:paddingBottom="22dp"
-        android:layout_marginTop="18dp">
+        android:paddingBottom="16dp"
+        android:layout_marginTop="8dp">
 
         <ImageButton
             android:id="@+id/prevBtn"
@@ -41,23 +69,14 @@
             android:contentDescription="Previous" />
 
         <ImageButton
-            android:id="@+id/pauseBtn"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:src="@android:drawable/ic_media_pause"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Pause"
-            android:layout_marginLeft="12dp"
-            android:layout_marginRight="12dp" />
-
-        <ImageButton
-            android:id="@+id/playBtn"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
+            android:id="@+id/playPauseBtn"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
             android:src="@android:drawable/ic_media_play"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Play"
-            android:layout_marginRight="12dp" />
+            android:contentDescription="PlayPause"
+            android:layout_marginLeft="14dp"
+            android:layout_marginRight="14dp" />
 
         <ImageButton
             android:id="@+id/nextBtn"
@@ -68,13 +87,39 @@
             android:contentDescription="Next" />
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/actionsRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <ImageButton
+            android:id="@+id/sortBtn"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:src="@android:drawable/ic_menu_sort_alphabetically"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Sort" />
+
+        <ImageButton
+            android:id="@+id/shuffleBtn"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:src="@android:drawable/ic_menu_rotate"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Shuffle"
+            android:layout_marginStart="16dp" />
+    </LinearLayout>
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
         android:text="Громкость"
         android:textSize="16sp"
-        android:layout_marginBottom="4dp"
-        android:textStyle="bold"/>
+        android:textStyle="bold" />
 
     <LinearLayout
         android:layout_width="match_parent"
