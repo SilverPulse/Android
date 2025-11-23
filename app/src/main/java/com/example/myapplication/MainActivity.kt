@@ -19,10 +19,16 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.buttonStub1).setOnClickListener {
             Toast.makeText(this, "В разработке", Toast.LENGTH_SHORT).show()
         }
+
         findViewById<Button>(R.id.bGoToPlayerActivity).setOnClickListener {
             val intent = Intent(this, MediaPlayerActivity::class.java)
             startActivity(intent)
         }
 
+        // Новая кнопка для перехода в LocationActivity
+        findViewById<Button>(R.id.btnGoToLocator).setOnClickListener {
+            val intent = Intent(this, LocatorActivity::class.java)
+            startActivity(intent)
+        }
     }
 }
