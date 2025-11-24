@@ -1,13 +1,17 @@
 package com.example.myapplication
 
 import android.Manifest
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
 import android.widget.Button
@@ -59,7 +63,8 @@ class LocatorActivity : LocationListener, AppCompatActivity() {
     private fun updateCurrentLocation() {
         if (checkPermissions()) {
             if (isLocationEnabled()) {
-                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                    ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     requestPermissions()
                     return
                 }
@@ -72,11 +77,12 @@ class LocatorActivity : LocationListener, AppCompatActivity() {
                 )
 
                 Toast.makeText(this, "Ожидание GPS сигнала...", Toast.LENGTH_SHORT).show()
-
+                logEvent("Запрос обновления местоположения")
             } else {
                 Toast.makeText(applicationContext, "Включите GPS в настройках", Toast.LENGTH_SHORT).show()
                 val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
                 startActivity(intent)
+                logEvent("GPS выключен, запрос включения")
             }
         } else {
             Log.w(LOG_TAG, "location permission is not allowed")
@@ -85,6 +91,7 @@ class LocatorActivity : LocationListener, AppCompatActivity() {
             tvAltitude.text = "Разрешение не предоставлено"
             tvTime.text = "Разрешение не предоставлено"
             requestPermissions()
+            logEvent("Разрешение на местоположение не предоставлено, запрос разрешений")
         }
     }
 
@@ -100,18 +107,16 @@ class LocatorActivity : LocationListener, AppCompatActivity() {
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == PERMISSION_REQUEST_ACCESS_LOCATION) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(applicationContext, "Разрешение предоставлено", Toast.LENGTH_SHORT).show()
+                logEvent("Разрешение на местоположение предоставлено")
                 updateCurrentLocation()
             } else {
                 Toast.makeText(applicationContext, "Разрешение отклонено", Toast.LENGTH_SHORT).show()
+                logEvent("Разрешение на местоположение отклонено")
             }
         }
     }
@@ -119,6 +124,28 @@ class LocatorActivity : LocationListener, AppCompatActivity() {
     private fun isLocationEnabled(): Boolean {
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
                 locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+    }
+
+    private fun logEvent(message: String) {
+        val logText = "${System.currentTimeMillis()}: $message\n"
+        val filename = "locator_log.txt"
+        try {
+            val resolver = contentResolver
+            val values = ContentValues()
+            values.put(MediaStore.Downloads.DISPLAY_NAME,filename)
+            values.put(MediaStore.Downloads.MIME_TYPE, "text/plain")
+            values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+
+            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI,values)
+            if (uri != null){
+                val outputStream = resolver.openOutputStream(uri,"wa")
+                outputStream?.write(logText.toByteArray())
+                outputStream?.close()
+            }
+
+        } catch (e: Exception) {
+            Log.e(LOG_TAG, "Ошибка записи лога: ${e.message}")
+        }
     }
 
     override fun onLocationChanged(location: Location) {
@@ -133,19 +160,26 @@ class LocatorActivity : LocationListener, AppCompatActivity() {
         tvLongitude.text = "Долгота: $longitude"
         tvAltitude.text = "Высота: $altitude м"
         tvTime.text = "Время: $time мс"
+
+        logEvent("Location changed: lat=$latitude, lon=$longitude, alt=$altitude, time=$time")
     }
 
     override fun onProviderEnabled(provider: String) {
         Log.i(LOG_TAG, "Provider enabled: $provider")
         Toast.makeText(this, "GPS включен", Toast.LENGTH_SHORT).show()
+        logEvent("Provider enabled: $provider")
     }
 
     override fun onProviderDisabled(provider: String) {
         Log.i(LOG_TAG, "Provider disabled: $provider")
         Toast.makeText(this, "GPS выключен", Toast.LENGTH_SHORT).show()
+        logEvent("Provider disabled: $provider")
     }
 
     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
         Log.i(LOG_TAG, "Provider status changed: $provider, status: $status")
+        if (provider != null) {
+            logEvent("Provider status changed: $provider, status: $status")
+        }
     }
 }
