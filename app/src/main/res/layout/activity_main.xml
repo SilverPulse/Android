@@ -39,6 +39,12 @@
         android:textSize="24sp"
         android:layout_marginBottom="16dp" />
 
-    <!-- В будущем добавлю другие кнопки -->
+    <Button
+        android:id="@+id/btnGoToSockets"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Sockets / ZMQ"
+        android:textSize="24sp"
+        android:layout_marginBottom="16dp" />
 
 </LinearLayout>

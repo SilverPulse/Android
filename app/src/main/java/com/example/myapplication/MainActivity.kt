@@ -25,9 +25,13 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        // Новая кнопка для перехода в LocationActivity
         findViewById<Button>(R.id.btnGoToLocator).setOnClickListener {
             val intent = Intent(this, LocatorActivity::class.java)
+            startActivity(intent)
+        }
+
+        findViewById<Button>(R.id.btnGoToSockets).setOnClickListener {
+            val intent = Intent(this, SocketsActivity::class.java)
             startActivity(intent)
         }
     }

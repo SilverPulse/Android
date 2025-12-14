@@ -14,6 +14,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
+import org.json.JSONObject
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -77,12 +78,12 @@ class LocatorActivity : LocationListener, AppCompatActivity() {
                 )
 
                 Toast.makeText(this, "Ожидание GPS сигнала...", Toast.LENGTH_SHORT).show()
-                logEvent("Запрос обновления местоположения")
+                logEventJson("Запрос обновления местоположения")
             } else {
                 Toast.makeText(applicationContext, "Включите GPS в настройках", Toast.LENGTH_SHORT).show()
                 val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
                 startActivity(intent)
-                logEvent("GPS выключен, запрос включения")
+                logEventJson("GPS выключен, запрос включения")
             }
         } else {
             Log.w(LOG_TAG, "location permission is not allowed")
@@ -91,7 +92,7 @@ class LocatorActivity : LocationListener, AppCompatActivity() {
             tvAltitude.text = "Разрешение не предоставлено"
             tvTime.text = "Разрешение не предоставлено"
             requestPermissions()
-            logEvent("Разрешение на местоположение не предоставлено, запрос разрешений")
+            logEventJson("Разрешение на местоположение не предоставлено, запрос разрешений")
         }
     }
 
@@ -112,11 +113,11 @@ class LocatorActivity : LocationListener, AppCompatActivity() {
         if (requestCode == PERMISSION_REQUEST_ACCESS_LOCATION) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(applicationContext, "Разрешение предоставлено", Toast.LENGTH_SHORT).show()
-                logEvent("Разрешение на местоположение предоставлено")
+                logEventJson("Разрешение на местоположение предоставлено")
                 updateCurrentLocation()
             } else {
                 Toast.makeText(applicationContext, "Разрешение отклонено", Toast.LENGTH_SHORT).show()
-                logEvent("Разрешение на местоположение отклонено")
+                logEventJson("Разрешение на местоположение отклонено")
             }
         }
     }
@@ -126,25 +127,27 @@ class LocatorActivity : LocationListener, AppCompatActivity() {
                 locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
     }
 
-    private fun logEvent(message: String) {
-        val logText = "${System.currentTimeMillis()}: $message\n"
-        val filename = "locator_log.txt"
+    private fun logEventJson(message: String) {
+        val jsonObject = JSONObject()
+        jsonObject.put("timestamp", System.currentTimeMillis())
+        jsonObject.put("event", message)
+        val filename = "locator_log.json"
+
         try {
             val resolver = contentResolver
             val values = ContentValues()
-            values.put(MediaStore.Downloads.DISPLAY_NAME,filename)
-            values.put(MediaStore.Downloads.MIME_TYPE, "text/plain")
+            values.put(MediaStore.Downloads.DISPLAY_NAME, filename)
+            values.put(MediaStore.Downloads.MIME_TYPE, "application/json")
             values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
 
-            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI,values)
-            if (uri != null){
-                val outputStream = resolver.openOutputStream(uri,"wa")
-                outputStream?.write(logText.toByteArray())
+            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            if (uri != null) {
+                val outputStream = resolver.openOutputStream(uri, "wa")
+                outputStream?.write((jsonObject.toString() + "\n").toByteArray())
                 outputStream?.close()
             }
-
         } catch (e: Exception) {
-            Log.e(LOG_TAG, "Ошибка записи лога: ${e.message}")
+            Log.e(LOG_TAG, "Ошибка записи JSON лога: ${e.message}")
         }
     }
 
@@ -161,25 +164,25 @@ class LocatorActivity : LocationListener, AppCompatActivity() {
         tvAltitude.text = "Высота: $altitude м"
         tvTime.text = "Время: $time мс"
 
-        logEvent("Location changed: lat=$latitude, lon=$longitude, alt=$altitude, time=$time")
+        logEventJson("Location changed: lat=$latitude, lon=$longitude, alt=$altitude, time=$time")
     }
 
     override fun onProviderEnabled(provider: String) {
         Log.i(LOG_TAG, "Provider enabled: $provider")
         Toast.makeText(this, "GPS включен", Toast.LENGTH_SHORT).show()
-        logEvent("Provider enabled: $provider")
+        logEventJson("Provider enabled: $provider")
     }
 
     override fun onProviderDisabled(provider: String) {
         Log.i(LOG_TAG, "Provider disabled: $provider")
         Toast.makeText(this, "GPS выключен", Toast.LENGTH_SHORT).show()
-        logEvent("Provider disabled: $provider")
+        logEventJson("Provider disabled: $provider")
     }
 
     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
         Log.i(LOG_TAG, "Provider status changed: $provider, status: $status")
         if (provider != null) {
-            logEvent("Provider status changed: $provider, status: $status")
+            logEventJson("Provider status changed: $provider, status: $status")
         }
     }
 }
