@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.zeromq.SocketType
 import org.zeromq.ZContext
+import org.json.JSONObject
 
 class SocketsActivity : AppCompatActivity() {
     private lateinit var tvLog: TextView
@@ -28,39 +29,35 @@ class SocketsActivity : AppCompatActivity() {
         btnSend.setOnClickListener {
             val ip = etServerIp.text.toString()
             if (ip.isNotEmpty()) {
-                sendZmqMessage(ip)
+                sendTestMessage(ip)
             } else {
-                tvLog.append("Пожалуйста, введите IP адрес!\n")
+                tvLog.append("Введите IP!\n")
             }
         }
     }
 
-    private fun sendZmqMessage(ip: String) {
-        tvLog.append("Подключение к $ip...\n")
+    private fun sendTestMessage(ip: String) {
+        tvLog.append("Тестовая отправка на $ip...\n")
+        val testJson = JSONObject().apply {
+            put("timestamp", System.currentTimeMillis())
+            put("type", "system_event")
+            put("message", "Тестовая проверка связи с телефона")
+        }
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 ZContext().use { context ->
                     val socket = context.createSocket(SocketType.REQ)
-                    socket.receiveTimeOut = 3000 // Тайм-аут 3 секунды
-
+                    socket.receiveTimeOut = 3000
                     socket.connect("tcp://$ip:5555")
-
-                    val message = "Hello from Android!"
-                    socket.send(message.toByteArray(Charsets.UTF_8), 0)
-
+                    socket.send(testJson.toString().toByteArray(Charsets.UTF_8), 0)
                     val reply = socket.recvStr(0)
 
                     withContext(Dispatchers.Main) {
-                        if (reply != null) {
-                            tvLog.append("Сервер: $reply\n")
-                        } else {
-                            tvLog.append("Ошибка: Сервер не ответил (тайм-аут).\n")
-                        }
+                        tvLog.append(if (reply != null) "Сервер: $reply\n" else "Тайм-аут\n")
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
                 withContext(Dispatchers.Main) {
                     tvLog.append("Ошибка: ${e.message}\n")
                 }

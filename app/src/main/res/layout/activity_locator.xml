@@ -12,7 +12,25 @@
         android:text="Данные о местоположении"
         android:textSize="22sp"
         android:textStyle="bold"
-        android:layout_marginBottom="30dp"/>
+        android:layout_marginBottom="20dp"/>
+
+    <EditText
+        android:id="@+id/etServerIpLocator"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="IP Сервера (например, 192.168.1.5)"
+        android:inputType="text"
+        android:digits="0123456789."
+        android:textAlignment="center"
+        android:layout_marginBottom="5dp" />
+
+    <CheckBox
+        android:id="@+id/cbAutoSend"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Авто-отправка на сервер"
+        android:checked="false"
+        android:layout_marginBottom="20dp" />
 
     <TextView
         android:id="@+id/tvLatitude"

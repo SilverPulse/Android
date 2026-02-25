@@ -1,188 +1,98 @@
 package com.example.myapplication
 
 import android.Manifest
-import android.content.ContentValues
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import android.os.Build
 import android.os.Bundle
-import android.os.Environment
-import android.provider.MediaStore
-import android.provider.Settings
 import android.util.Log
-import org.json.JSONObject
-import android.widget.Button
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import kotlinx.coroutines.*
+import org.json.JSONObject
+import org.zeromq.SocketType
+import org.zeromq.ZContext
 
 class LocatorActivity : LocationListener, AppCompatActivity() {
-
-    private val LOG_TAG: String = "LOCATOR_ACTIVITY"
-
-    companion object {
-        private const val PERMISSION_REQUEST_ACCESS_LOCATION = 100
-    }
-
+    private val PREFS_NAME = "MySettings"
+    private val IP_KEY = "server_ip"
     private lateinit var locationManager: LocationManager
     private lateinit var tvLatitude: TextView
     private lateinit var tvLongitude: TextView
     private lateinit var tvAltitude: TextView
     private lateinit var tvTime: TextView
-    private lateinit var btnGetLocation: Button
+    private lateinit var etServerIp: EditText
+    private lateinit var cbAutoSend: CheckBox
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_locator)
 
-        locationManager = this.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         tvLatitude = findViewById(R.id.tvLatitude)
         tvLongitude = findViewById(R.id.tvLongitude)
         tvAltitude = findViewById(R.id.tvAltitude)
         tvTime = findViewById(R.id.tvTime)
-        btnGetLocation = findViewById(R.id.btnGetLocation)
-    }
+        etServerIp = findViewById(R.id.etServerIpLocator)
+        cbAutoSend = findViewById(R.id.cbAutoSend)
 
-    override fun onResume() {
-        super.onResume()
-        btnGetLocation.setOnClickListener {
-            updateCurrentLocation()
-        }
-        updateCurrentLocation()
-    }
+        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        etServerIp.setText(getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString(IP_KEY, ""))
 
-    override fun onPause() {
-        super.onPause()
-        locationManager.removeUpdates(this)
-    }
-
-    private fun updateCurrentLocation() {
-        if (checkPermissions()) {
-            if (isLocationEnabled()) {
-                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-                    ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    requestPermissions()
-                    return
-                }
-
-                locationManager.requestLocationUpdates(
-                    LocationManager.GPS_PROVIDER,
-                    100000L,
-                    5f,
-                    this
-                )
-
-                Toast.makeText(this, "Ожидание GPS сигнала...", Toast.LENGTH_SHORT).show()
-                logEventJson("Запрос обновления местоположения")
+        findViewById<Button>(R.id.btnGetLocation).setOnClickListener {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000L, 2f, this)
+                Toast.makeText(this, "Поиск спутников...", Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(applicationContext, "Включите GPS в настройках", Toast.LENGTH_SHORT).show()
-                val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-                startActivity(intent)
-                logEventJson("GPS выключен, запрос включения")
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 100)
             }
-        } else {
-            Log.w(LOG_TAG, "location permission is not allowed")
-            tvLatitude.text = "Разрешение не предоставлено"
-            tvLongitude.text = "Разрешение не предоставлено"
-            tvAltitude.text = "Разрешение не предоставлено"
-            tvTime.text = "Разрешение не предоставлено"
-            requestPermissions()
-            logEventJson("Разрешение на местоположение не предоставлено, запрос разрешений")
-        }
-    }
-
-    private fun requestPermissions() {
-        Log.w(LOG_TAG, "requestPermissions()")
-        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION),
-            PERMISSION_REQUEST_ACCESS_LOCATION
-        )
-    }
-
-    private fun checkPermissions(): Boolean {
-        return ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST_ACCESS_LOCATION) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(applicationContext, "Разрешение предоставлено", Toast.LENGTH_SHORT).show()
-                logEventJson("Разрешение на местоположение предоставлено")
-                updateCurrentLocation()
-            } else {
-                Toast.makeText(applicationContext, "Разрешение отклонено", Toast.LENGTH_SHORT).show()
-                logEventJson("Разрешение на местоположение отклонено")
-            }
-        }
-    }
-
-    private fun isLocationEnabled(): Boolean {
-        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
-                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-    }
-
-    private fun logEventJson(message: String) {
-        val jsonObject = JSONObject()
-        jsonObject.put("timestamp", System.currentTimeMillis())
-        jsonObject.put("event", message)
-        val filename = "locator_log.json"
-
-        try {
-            val resolver = contentResolver
-            val values = ContentValues()
-            values.put(MediaStore.Downloads.DISPLAY_NAME, filename)
-            values.put(MediaStore.Downloads.MIME_TYPE, "application/json")
-            values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-
-            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-            if (uri != null) {
-                val outputStream = resolver.openOutputStream(uri, "wa")
-                outputStream?.write((jsonObject.toString() + "\n").toByteArray())
-                outputStream?.close()
-            }
-        } catch (e: Exception) {
-            Log.e(LOG_TAG, "Ошибка записи JSON лога: ${e.message}")
         }
     }
 
     override fun onLocationChanged(location: Location) {
-        Log.i(LOG_TAG, "Location changed: ${location.latitude}, ${location.longitude}")
+        tvLatitude.text = "Широта: ${location.latitude}"
+        tvLongitude.text = "Долгота: ${location.longitude}"
+        tvAltitude.text = "Высота: ${location.altitude} м"
+        tvTime.text = "Время: ${location.time} мс"
 
-        val latitude = location.latitude
-        val longitude = location.longitude
-        val altitude = location.altitude
-        val time = location.time
+        val root = JSONObject().apply {
+            put("timestamp", System.currentTimeMillis())
+            put("type", "location_update")
+            put("data", JSONObject().apply {
+                put("lat", location.latitude)
+                put("lon", location.longitude)
+                put("alt", location.altitude)
+                put("time", location.time)
+            })
+        }
 
-        tvLatitude.text = "Широта: $latitude"
-        tvLongitude.text = "Долгота: $longitude"
-        tvAltitude.text = "Высота: $altitude м"
-        tvTime.text = "Время: $time мс"
-
-        logEventJson("Location changed: lat=$latitude, lon=$longitude, alt=$altitude, time=$time")
+        if (cbAutoSend.isChecked) sendToServer(root)
     }
 
-    override fun onProviderEnabled(provider: String) {
-        Log.i(LOG_TAG, "Provider enabled: $provider")
-        Toast.makeText(this, "GPS включен", Toast.LENGTH_SHORT).show()
-        logEventJson("Provider enabled: $provider")
-    }
+    private fun sendToServer(json: JSONObject) {
+        val ip = etServerIp.text.toString()
+        if (ip.isEmpty()) return
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString(IP_KEY, ip).apply()
 
-    override fun onProviderDisabled(provider: String) {
-        Log.i(LOG_TAG, "Provider disabled: $provider")
-        Toast.makeText(this, "GPS выключен", Toast.LENGTH_SHORT).show()
-        logEventJson("Provider disabled: $provider")
-    }
-
-    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
-        Log.i(LOG_TAG, "Provider status changed: $provider, status: $status")
-        if (provider != null) {
-            logEventJson("Provider status changed: $provider, status: $status")
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                ZContext().use { context ->
+                    val socket = context.createSocket(SocketType.REQ)
+                    socket.linger = 0
+                    socket.receiveTimeOut = 2000
+                    socket.connect("tcp://$ip:5555")
+                    socket.send(json.toString().toByteArray(Charsets.UTF_8), 0)
+                    socket.recvStr(0)
+                }
+            } catch (e: Exception) {
+                Log.e("LOCATOR", "Ошибка: ${e.message}")
+            }
         }
     }
+
+    override fun onProviderEnabled(p: String) {}
+    override fun onProviderDisabled(p: String) {}
+    override fun onPause() { super.onPause(); locationManager.removeUpdates(this) }
 }
