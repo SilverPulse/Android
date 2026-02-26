@@ -22,7 +22,7 @@
         android:inputType="text"
         android:digits="0123456789."
         android:textAlignment="center"
-        android:layout_marginBottom="5dp" />
+        android:layout_marginBottom="10dp" />
 
     <CheckBox
         android:id="@+id/cbAutoSend"
@@ -30,7 +30,7 @@
         android:layout_height="wrap_content"
         android:text="Авто-отправка на сервер"
         android:checked="false"
-        android:layout_marginBottom="20dp" />
+        android:layout_marginBottom="10dp" />
 
     <TextView
         android:id="@+id/tvLatitude"
@@ -38,7 +38,7 @@
         android:layout_height="wrap_content"
         android:text="Широта: ---"
         android:textSize="18sp"
-        android:layout_marginBottom="10dp"/>
+        android:layout_marginBottom="5dp"/>
 
     <TextView
         android:id="@+id/tvLongitude"
@@ -46,7 +46,7 @@
         android:layout_height="wrap_content"
         android:text="Долгота: ---"
         android:textSize="18sp"
-        android:layout_marginBottom="10dp"/>
+        android:layout_marginBottom="5dp"/>
 
     <TextView
         android:id="@+id/tvAltitude"
@@ -54,7 +54,7 @@
         android:layout_height="wrap_content"
         android:text="Высота: ---"
         android:textSize="18sp"
-        android:layout_marginBottom="10dp"/>
+        android:layout_marginBottom="5dp"/>
 
     <TextView
         android:id="@+id/tvTime"
@@ -62,13 +62,48 @@
         android:layout_height="wrap_content"
         android:text="Время: ---"
         android:textSize="18sp"
-        android:layout_marginBottom="30dp"/>
+        android:layout_marginBottom="15dp"/>
 
     <Button
         android:id="@+id/btnGetLocation"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Получить местоположение"
-        android:textSize="16sp"/>
+        android:textSize="16sp"
+        android:layout_marginBottom="30dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Фоновый мониторинг (Телеметрия + Трафик)"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="#555555"
+        android:layout_marginBottom="10dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="2">
+
+        <Button
+            android:id="@+id/btnStartService"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Старт"
+            android:backgroundTint="#4CAF50"
+            android:layout_marginEnd="5dp"/>
+
+        <Button
+            android:id="@+id/btnStopService"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Стоп"
+            android:backgroundTint="#F44336"
+            android:layout_marginStart="5dp"/>
+    </LinearLayout>
 
 </LinearLayout>

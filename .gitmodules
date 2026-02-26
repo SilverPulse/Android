@@ -1,0 +1,3 @@
+[submodule "Android-Backend"]
+	path = Android-Backend
+	url = https://github.com/SilverPulse/Android-Backend

@@ -4,7 +4,6 @@
     package="com.example.myapplication">
 
     <uses-permission android:name="android.permission.INTERNET" />
-
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
@@ -12,6 +11,17 @@
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
 
     <application
         android:allowBackup="true"
@@ -25,30 +35,17 @@
         tools:targetApi="31"
         tools:ignore="GoogleAppIndexingWarning">
 
-        <activity
-            android:name=".MediaPlayerActivity"
-            android:exported="true"
-            android:label="Музыкальный плеер" />
-
-        <activity
-            android:name=".CalculatorActivity"
-            android:exported="true"
-            android:label="Калькулятор" />
-
-        <activity
-            android:name=".LocatorActivity"
+        <service
+            android:name=".TelemetryService"
+            android:enabled="true"
             android:exported="false"
-            android:label="Локатор" />
+            android:foregroundServiceType="location" />
 
-        <activity
-            android:name=".SocketsActivity"
-            android:exported="false"
-            android:label="Sockets / ZMQ" />
-
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:label="@string/app_name">
+        <activity android:name=".MediaPlayerActivity" android:exported="true" android:label="Музыкальный плеер" />
+        <activity android:name=".CalculatorActivity" android:exported="true" android:label="Калькулятор" />
+        <activity android:name=".LocatorActivity" android:exported="false" android:label="Локатор" />
+        <activity android:name=".SocketsActivity" android:exported="false" android:label="Sockets / ZMQ" />
+        <activity android:name=".MainActivity" android:exported="true" android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -56,5 +53,4 @@
         </activity>
 
     </application>
-
 </manifest>
