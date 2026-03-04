@@ -1,6 +1,7 @@
 package com.example.myapplication
 
 import android.Manifest
+import android.app.ActivityManager
 import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
@@ -11,151 +12,130 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.util.Log
 import android.widget.Button
-import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import org.json.JSONObject
-import org.zeromq.SocketType
-import org.zeromq.ZContext
+import androidx.core.content.ContextCompat
+import android.util.Log
 
 class LocatorActivity : AppCompatActivity(), LocationListener {
     private val PREFS_NAME = "MySettings"
     private val IP_KEY = "server_ip"
 
-    private lateinit var locationManager: LocationManager
     private lateinit var etServerIp: EditText
-    private lateinit var cbAutoSend: CheckBox
+    private lateinit var btnMainAction: Button
     private lateinit var tvLatitude: TextView
     private lateinit var tvLongitude: TextView
     private lateinit var tvAltitude: TextView
     private lateinit var tvTime: TextView
-    private lateinit var btnGetLocation: Button
-    private lateinit var btnStart: Button
-    private lateinit var btnStop: Button
+    private lateinit var locationManager: LocationManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_locator)
 
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-
         etServerIp = findViewById(R.id.etServerIpLocator)
-        cbAutoSend = findViewById(R.id.cbAutoSend)
+        btnMainAction = findViewById(R.id.btnMainAction)
         tvLatitude = findViewById(R.id.tvLatitude)
         tvLongitude = findViewById(R.id.tvLongitude)
         tvAltitude = findViewById(R.id.tvAltitude)
         tvTime = findViewById(R.id.tvTime)
-        btnGetLocation = findViewById(R.id.btnGetLocation)
-        btnStart = findViewById(R.id.btnStartService)
-        btnStop = findViewById(R.id.btnStopService)
 
         etServerIp.setText(getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString(IP_KEY, ""))
 
-        btnGetLocation.setOnClickListener {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000L, 2f, this)
-                Toast.makeText(this, "Поиск спутников...", Toast.LENGTH_SHORT).show()
+        updateButtonState()
+
+        btnMainAction.setOnClickListener {
+            if (isServiceRunning(TelemetryService::class.java)) {
+                stopMonitoring()
             } else {
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 100)
+                startMonitoring()
             }
-        }
-
-        btnStart.setOnClickListener {
-            val ip = etServerIp.text.toString()
-            if (ip.isEmpty()) {
-                Toast.makeText(this, "Введите IP сервера !", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString(IP_KEY, ip).apply()
-            checkPermissionsAndStartService(ip)
-        }
-
-        btnStop.setOnClickListener {
-            stopService(Intent(this, TelemetryService::class.java))
-            Toast.makeText(this, "Фоновый мониторинг остановлен", Toast.LENGTH_SHORT).show()
         }
     }
 
-    override fun onLocationChanged(location: Location) {
-        tvLatitude.text = "Широта: ${location.latitude}"
-        tvLongitude.text = "Долгота: ${location.longitude}"
-        tvAltitude.text = "Высота: ${location.altitude} м"
-        tvTime.text = "Время: ${location.time} мс"
-
-        val root = JSONObject().apply {
-            put("timestamp", System.currentTimeMillis())
-            put("type", "location_update")
-            put("data", JSONObject().apply {
-                put("lat", location.latitude)
-                put("lon", location.longitude)
-                put("alt", location.altitude)
-                put("time", location.time)
-            })
-        }
-
-        if (cbAutoSend.isChecked) sendToServerOld(root)
-    }
-
-    private fun sendToServerOld(json: JSONObject) {
+    private fun startMonitoring() {
         val ip = etServerIp.text.toString()
-        if (ip.isEmpty()) return
+        if (ip.isEmpty()) {
+            Toast.makeText(this, "Введите IP сервера!", Toast.LENGTH_SHORT).show()
+            return
+        }
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString(IP_KEY, ip).apply()
 
-        CoroutineScope(Dispatchers.IO).launch {
+        if (checkAndRequestPermissions()) {
             try {
-                ZContext().use { context ->
-                    val socket = context.createSocket(SocketType.REQ)
-                    socket.linger = 0
-                    socket.receiveTimeOut = 2000
-                    socket.connect("tcp://$ip:5555")
-                    socket.send(json.toString().toByteArray(Charsets.UTF_8), 0)
-                    socket.recvStr(0)
+                val intent = Intent(this, TelemetryService::class.java).apply { putExtra("IP", ip) }
+                ContextCompat.startForegroundService(this, intent)
+
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000L, 2f, this)
                 }
+                updateButtonState()
             } catch (e: Exception) {
-                Log.e("LOCATOR", "Ошибка: ${e.message}")
+                Log.e("CRASH", "Ошибка при старте: ${e.message}")
+                Toast.makeText(this, "Ошибка запуска: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    private fun checkPermissionsAndStartService(ip: String) {
-        val permissions = mutableListOf(
+    private fun stopMonitoring() {
+        stopService(Intent(this, TelemetryService::class.java))
+        locationManager.removeUpdates(this)
+        updateButtonState()
+        Toast.makeText(this, "Отправка остановлена", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun updateButtonState() {
+        if (isServiceRunning(TelemetryService::class.java)) {
+            btnMainAction.text = "ОСТАНОВИТЬ ОТПРАВКУ"
+            btnMainAction.setBackgroundColor(android.graphics.Color.parseColor("#F44336"))
+        } else {
+            btnMainAction.text = "ОТПРАВИТЬ ДАННЫЕ"
+            btnMainAction.setBackgroundColor(android.graphics.Color.parseColor("#4CAF50"))
+        }
+    }
+
+    private fun checkAndRequestPermissions(): Boolean {
+        val basicPermissions = mutableListOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.READ_PHONE_STATE
         )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+            basicPermissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
 
-        val missingPermissions = permissions.filter {
-            ActivityCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        val missingBasic = basicPermissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
 
-        if (missingPermissions.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, missingPermissions.toTypedArray(), 100)
-            return
+        if (missingBasic.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, missingBasic.toTypedArray(), 101)
+            return false
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+
+                Toast.makeText(this, "В открывшемся окне выберите 'Разрешить в любом режиме'", Toast.LENGTH_LONG).show()
+
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), 102)
+                return false
+            }
         }
 
         if (!hasUsageStatsPermission()) {
-            Toast.makeText(this, "Дайте разрешение на доступ к истории использования трафика", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Дайте доступ к статистике использования", Toast.LENGTH_SHORT).show()
             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-            return
+            return false
         }
 
-        val serviceIntent = Intent(this, TelemetryService::class.java).apply { putExtra("IP", ip) }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
-        }
-        Toast.makeText(this, "Сбор телеметрии запущен в фоне!", Toast.LENGTH_SHORT).show()
+        return true
     }
 
     private fun hasUsageStatsPermission(): Boolean {
@@ -168,11 +148,21 @@ class LocatorActivity : AppCompatActivity(), LocationListener {
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
+    override fun onLocationChanged(location: Location) {
+        tvLatitude.text = "Широта: ${location.latitude}"
+        tvLongitude.text = "Долгота: ${location.longitude}"
+        tvAltitude.text = "Высота: ${location.altitude} м"
+        tvTime.text = "Время: ${location.time} мс"
+    }
+
+    private fun isServiceRunning(serviceClass: Class<*>): Boolean {
+        val manager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        for (service in manager.getRunningServices(Int.MAX_VALUE)) {
+            if (serviceClass.name == service.service.className) return true
+        }
+        return false
+    }
+
     override fun onProviderEnabled(p: String) {}
     override fun onProviderDisabled(p: String) {}
-
-    override fun onPause() {
-        super.onPause()
-        locationManager.removeUpdates(this)
-    }
 }
