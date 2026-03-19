@@ -89,7 +89,7 @@ class TelemetryService : Service(), LocationListener {
             if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
                 == android.content.pm.PackageManager.PERMISSION_GRANTED) {
 
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000L, 2f, this)
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000L, 2f, this)
                 Log.d("SERVICE", "GPS обновления запущены успешно")
             } else {
                 Log.e("SERVICE", "Нет прав ACCESS_FINE_LOCATION для запуска GPS!")
@@ -160,17 +160,72 @@ class TelemetryService : Service(), LocationListener {
     private fun getCellInfoJson(): JSONObject {
         val root = JSONObject()
         try {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                return root
+            }
+
             val infoList = telephonyManager.allCellInfo ?: return root
+
             for (info in infoList) {
                 if (info is CellInfoLte) {
                     val id = info.cellIdentity
                     val ss = info.cellSignalStrength
                     root.put("lte", JSONObject().apply {
-                        put("pci", id.pci); put("earfcn", id.earfcn); put("rsrp", ss.rsrp)
+                        put("pci", id.pci)
+                        put("earfcn", id.earfcn)
+                        put("ci", id.ci)
+                        put("tac", id.tac)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) put("mcc", id.mccString) else put("mcc", id.mcc)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) put("mnc", id.mncString) else put("mnc", id.mnc)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) put("band", id.bands.joinToString(","))
+
+                        put("rsrp", ss.rsrp)
+                        put("rsrq", ss.rsrq)
+                        put("rssi", ss.rssi)
+                        put("rssnr", ss.rssnr)
+                        put("cqi", ss.cqi)
+                        put("asu_level", ss.asuLevel)
+                        put("timing_advance", ss.timingAdvance)
+                    })
+                }
+                else if (info is CellInfoGsm) {
+                    val id = info.cellIdentity
+                    val ss = info.cellSignalStrength
+                    root.put("gsm", JSONObject().apply {
+                        put("ci", id.cid)
+                        put("bsic", id.bsic)
+                        put("arfcn", id.arfcn)
+                        put("lac", id.lac)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) put("mcc", id.mccString) else put("mcc", id.mcc)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) put("mnc", id.mncString) else put("mnc", id.mnc)
+
+                        put("dbm", ss.dbm)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) put("rssi", ss.rssi)
+                        put("timing_advance", ss.timingAdvance)
+                    })
+                }
+                else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && info is android.telephony.CellInfoNr) {
+                    val id = info.cellIdentity as android.telephony.CellIdentityNr
+                    val ss = info.cellSignalStrength as android.telephony.CellSignalStrengthNr
+                    root.put("nr", JSONObject().apply {
+                        put("nci", id.nci)
+                        put("pci", id.pci)
+                        put("nrarfcn", id.nrarfcn)
+                        put("tac", id.tac)
+                        put("mcc", id.mccString)
+                        put("mnc", id.mncString)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) put("band", id.bands.joinToString(","))
+
+                        put("ss_rsrp", ss.csiRsrp)
+                        put("ss_rsrq", ss.csiRsrq)
+                        put("ss_sinr", ss.csiSinr)
                     })
                 }
             }
-        } catch (e: SecurityException) {}
+        } catch (e: SecurityException) {
+            Log.e("TELEMETRY", "Нет прав для получения данных о сети")
+        }
         return root
     }
 
